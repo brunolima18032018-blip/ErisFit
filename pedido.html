@@ -1,0 +1,64 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Status do Pedido — ErisFit</title>
+  <style>
+    *{box-sizing:border-box} body{margin:0;font-family:Arial,Helvetica,sans-serif;background:#FBF8FE;color:#1A1320;min-height:100vh;display:flex;align-items:center;justify-content:center;padding:20px}
+    .card{width:100%;max-width:560px;background:#fff;border:1px solid #E4D6F5;border-radius:24px;padding:28px;text-align:center;box-shadow:0 18px 50px rgba(76,29,149,.14)}
+    img{max-width:190px;border-radius:18px;margin-bottom:12px}.icon{width:70px;height:70px;border-radius:50%;display:flex;align-items:center;justify-content:center;margin:0 auto 16px;font-size:34px;font-weight:900}
+    .success{background:#ecfdf3;color:#166534}.pending{background:#fff7ed;color:#c2410c}.failure{background:#fff1f2;color:#991b1b}
+    h1{margin:8px 0 8px;font-size:28px}.muted{color:#6d6477;line-height:1.5}.pedido{background:#faf5ff;border:1px dashed #c084fc;border-radius:14px;padding:12px;margin:18px 0;color:#6b21a8;font-weight:800}
+    a{display:inline-block;margin-top:18px;background:#A855F7;color:white;text-decoration:none;padding:12px 18px;border-radius:999px;font-weight:800}
+  </style>
+</head>
+<body>
+  <main class="card">
+    <img src="./assets/logo-erisfit-crop.jpeg" alt="ErisFit">
+    <div id="status-icon" class="icon pending">!</div>
+    <h1 id="titulo">Estamos verificando seu pedido</h1>
+    <p id="mensagem" class="muted">Aguarde enquanto consultamos o status do pagamento.</p>
+    <div id="pedido-box" class="pedido" style="display:none"></div>
+    <p class="muted">Se tiver dúvida, fale com a ErisFit no WhatsApp: <strong>(85) 9 8949-8084</strong>.</p>
+    <a href="./index.html">Voltar para a loja</a>
+  </main>
+
+  <script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-app-compat.js"></script>
+  <script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-firestore-compat.js"></script>
+  <script>
+    const firebaseConfig = {
+      apiKey: "AIzaSyCGs24Zjzfr9a1SqrZHo3tG-JRHTegSKAs",
+      authDomain: "erisfit.firebaseapp.com",
+      projectId: "erisfit",
+      storageBucket: "erisfit.firebasestorage.app",
+      messagingSenderId: "319946026105",
+      appId: "1:319946026105:web:5500671991fa2415a738a8"
+    };
+    const params = new URLSearchParams(location.search);
+    const pedidoId = params.get('pedido');
+    const statusUrl = params.get('status');
+    const titulo = document.getElementById('titulo');
+    const msg = document.getElementById('mensagem');
+    const icon = document.getElementById('status-icon');
+    const box = document.getElementById('pedido-box');
+    if (pedidoId) { box.style.display='block'; box.textContent = 'Pedido: ' + pedidoId; }
+    function setStatus(tipo, t, m, simbolo){ icon.className='icon '+tipo; icon.textContent=simbolo; titulo.textContent=t; msg.textContent=m; }
+    function statusLocal(){
+      if (statusUrl === 'success') setStatus('success','Pagamento recebido!','Se o Mercado Pago confirmou o pagamento, seu pedido já será separado.','✓');
+      else if (statusUrl === 'failure') setStatus('failure','Pagamento não aprovado','Seu pagamento não foi aprovado. Você pode voltar à loja e tentar novamente.','×');
+      else setStatus('pending','Pagamento em verificação','Seu pagamento pode estar pendente ou em análise. Assim que aprovar, separamos o pedido.','!');
+    }
+    if (window.firebase && pedidoId) {
+      firebase.initializeApp(firebaseConfig);
+      firebase.firestore().collection('pedidos').doc(pedidoId).onSnapshot(doc => {
+        if (!doc.exists) return statusLocal();
+        const p = doc.data();
+        if (p.status === 'pago') setStatus('success','Pagamento aprovado!','Seu pedido foi confirmado e vai para separação. Obrigada por comprar na ErisFit!','✓');
+        else if (['pagamento_recusado','cancelado','expirado','erro_pagamento'].includes(p.status)) setStatus('failure','Pagamento não confirmado','O pedido não foi pago ou expirou. O estoque foi liberado para venda novamente.','×');
+        else setStatus('pending','Aguardando pagamento','Ainda estamos aguardando a confirmação do Mercado Pago.','!');
+      }, statusLocal);
+    } else statusLocal();
+  </script>
+</body>
+</html>
